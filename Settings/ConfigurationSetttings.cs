@@ -7,7 +7,7 @@ namespace Appendesk
     internal static class ConfigurationSettings
     {
         private const string AppSettingFilename = "appsettings.json";
-        private const string DefaultConnectionName = "Appendesk";
+        private const string DefaultConnectionName = "DefaultConnection";
         public const string ParameterMarker = "@";
         public const string SequenceProcName = "GetSequence";
         public static ConnectionEntry GetConnectionEntry()
