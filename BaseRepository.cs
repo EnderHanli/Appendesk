@@ -5,12 +5,13 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Appendesk
 {
-    public abstract class DataLayer : IDisposable
+    public abstract class BaseRepository : IDisposable
     {
-        private readonly DatabaseFactory _databaseFactory;
+        private readonly DbFactory _dbFactory;
         private DbConnection _dbConnection;
         private DbTransaction _dbTransaction;
         private readonly string _parentSavePoint;
@@ -18,24 +19,24 @@ namespace Appendesk
         private bool _disposed;
 
         #region Constructor
-        protected DataLayer()
+        protected BaseRepository()
         {
-            _databaseFactory = new DatabaseFactory();
+            _dbFactory = new DbFactory();
             CreateConnection();
         }
 
-        protected DataLayer(string connectionName)
+        protected BaseRepository(string connectionName)
         {
-            _databaseFactory = new DatabaseFactory(connectionName);
+            _dbFactory = new DbFactory(connectionName);
             CreateConnection();
         }
 
-        protected DataLayer(DataLayer dataLayer)
+        protected BaseRepository(BaseRepository repository)
         {
-            _databaseFactory = dataLayer._databaseFactory;
-            _dbConnection = dataLayer._dbConnection;
-            _dbTransaction = dataLayer._dbTransaction;
-            _parentSavePoint = dataLayer._savePoint;
+            _dbFactory = repository._dbFactory;
+            _dbConnection = repository._dbConnection;
+            _dbTransaction = repository._dbTransaction;
+            _parentSavePoint = repository._savePoint;
         }
         #endregion
 
@@ -167,7 +168,7 @@ namespace Appendesk
         /// </summary>
         private void CreateConnection()
         {
-            _dbConnection = _databaseFactory.CreateConnection();
+            _dbConnection = _dbFactory.CreateConnection();
             _dbConnection.Open();
         }
 
@@ -179,7 +180,7 @@ namespace Appendesk
             _savePoint = Guid.NewGuid().ToString();
             if (_dbConnection == null)
             {
-                _dbConnection = _databaseFactory.CreateConnection();
+                _dbConnection = _dbFactory.CreateConnection();
             }
 
             if (_dbConnection.State != ConnectionState.Open)
@@ -197,6 +198,7 @@ namespace Appendesk
         /// 
         /// </summary>
         public void TransactionCommit()
+
         {
             if (_parentSavePoint != null)
             {
@@ -210,7 +212,6 @@ namespace Appendesk
                 _dbConnection.Close();
             }
         }
-
         /// <summary>
         /// 
         /// </summary>
@@ -248,11 +249,28 @@ namespace Appendesk
         /// <typeparam name="T"></typeparam>
         /// <param name="command"></param>
         /// <returns></returns>
-        protected List<T> GetEntites<T>(QueryCommand command)
+        protected IEnumerable<T> GetEntites<T>(QueryCommand command)
         {
             try
             {
                 return _dbConnection.Query<T>(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text).ToList();
+            }
+            catch (Exception Ex)
+            {
+                throw new Exception(Ex.Message);
+            }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="command"></param>
+        /// <returns></returns>
+        protected async Task<IEnumerable<T>> GetEntitesAsync<T>(QueryCommand command)
+        {
+            try
+            {
+                return await _dbConnection.QueryAsync<T>(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
             }
             catch (Exception Ex)
             {
@@ -279,17 +297,36 @@ namespace Appendesk
                 throw;
             }
         }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="command"></param>
+        /// <returns></returns>
+        protected async Task<DataTable> GetDataTableAsync(QueryCommand command)
+        {
+            try
+            {
+                var results = await _dbConnection.QueryAsync(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
+                DataTable dataTable = new DataTable();
+                dataTable.ToDataTable(results.ToList());
+                return dataTable;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        protected long Insert(QueryCommand command)
+        protected int Insert(QueryCommand command)
         {
             try
             {
-                return _dbConnection.ExecuteScalar<long>(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
+                return _dbConnection.ExecuteScalar<int>(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
             }
             catch (Exception)
             {
@@ -301,11 +338,12 @@ namespace Appendesk
         /// 
         /// </summary>
         /// <param name="command"></param>
-        protected void Update(QueryCommand command)
+        /// <returns></returns>
+        protected async Task<int> InsertAsync(QueryCommand command)
         {
             try
             {
-                _dbConnection.Execute(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
+                return await _dbConnection.ExecuteScalarAsync<int>(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
             }
             catch (Exception)
             {
@@ -317,11 +355,59 @@ namespace Appendesk
         /// 
         /// </summary>
         /// <param name="command"></param>
-        protected void Delete(QueryCommand command)
+        protected int Update(QueryCommand command)
         {
             try
             {
-                _dbConnection.Execute(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
+                return _dbConnection.ExecuteScalar<int>(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="command"></param>
+        protected async Task<int> UpdateAsync(QueryCommand command)
+        {
+            try
+            {
+                return await _dbConnection.ExecuteScalarAsync<int>(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="command"></param>
+        protected int Delete(QueryCommand command)
+        {
+            try
+            {
+                return _dbConnection.ExecuteScalar<int>(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="command"></param>
+        protected async Task<int> DeleteAsync(QueryCommand command)
+        {
+            try
+            {
+                return await _dbConnection.ExecuteScalarAsync<int>(command.Sql, command.DynamicParameters, command.Transaction, commandType: command.CommandType = CommandType.Text);
             }
             catch (Exception)
             {
@@ -364,7 +450,7 @@ namespace Appendesk
         #endregion
 
         #region Dispose
-        ~DataLayer()
+        ~BaseRepository()
         {
             Dispose(false);
         }
@@ -389,9 +475,9 @@ namespace Appendesk
                         _dbConnection.Dispose();
                     }
 
-                    if (_databaseFactory != null)
+                    if (_dbFactory != null)
                     {
-                        _databaseFactory.Dispose();
+                        _dbFactory.Dispose();
                     }
                 }
                 _disposed = true;

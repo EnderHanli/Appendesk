@@ -4,7 +4,7 @@ using System.Data.Common;
 
 namespace Appendesk
 {
-    internal class DatabaseFactory : IDisposable
+    internal class DbFactory : IDisposable
     {
         private readonly DbProviderFactory _dbProviderFactory;
 
@@ -13,7 +13,7 @@ namespace Appendesk
         /// <summary>
         /// 
         /// </summary>
-        public DatabaseFactory()
+        public DbFactory()
         {
             _connectionEntry = ConfigurationSettings.GetConnectionEntry();
             DbProviderFactories.RegisterFactory("System.Data.SqlClient", System.Data.SqlClient.SqlClientFactory.Instance);
@@ -24,7 +24,7 @@ namespace Appendesk
         /// 
         /// </summary>
         /// <param name="connectionName"></param>
-        public DatabaseFactory(string connectionName)
+        public DbFactory(string connectionName)
         {
             _connectionEntry = ConfigurationSettings.GetConnectionEntry(connectionName);
             _dbProviderFactory = DbProviderFactories.GetFactory(_connectionEntry.ProviderName);
@@ -79,7 +79,7 @@ namespace Appendesk
         /// <summary>
         /// 
         /// </summary>
-        ~DatabaseFactory()
+        ~DbFactory()
         {
             Dispose(false);
         }

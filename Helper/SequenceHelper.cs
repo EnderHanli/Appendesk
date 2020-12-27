@@ -7,7 +7,7 @@ namespace Appendesk
     {
         private static readonly string ProjectPrefix = "Tst";//ConfigurationManager.AppSettings["ProjectPrefix"];
 
-        public static string GetSequenceName(this BusinessLayer businessLayer, string key)
+        public static string GetSequenceName(this BaseService businessLayer, string key)
         {
             var stringBuilder=new StringBuilder();
             stringBuilder.Append(ProjectPrefix)
