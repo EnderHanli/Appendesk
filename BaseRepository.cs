@@ -180,7 +180,7 @@ namespace Appendesk
             _savePoint = Guid.NewGuid().ToString();
             if (_dbConnection == null)
             {
-                _dbConnection = _dbFactory.CreateConnection();
+                CreateConnection();
             }
 
             if (_dbConnection.State != ConnectionState.Open)
@@ -198,7 +198,6 @@ namespace Appendesk
         /// 
         /// </summary>
         public void TransactionCommit()
-
         {
             if (_parentSavePoint != null)
             {
